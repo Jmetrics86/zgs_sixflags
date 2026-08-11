@@ -1,5 +1,5 @@
 // Three.js 3D Park Scene for Cedar Point
-// Features Thrill Energy Orbs, Perimeter Fence, Coca-Cola Freestyle Machines, Repositioned Hotel Breakers (Top-Right), Trees, Bushes & Street Lighting
+// Clean Paved Roads, 100% Path Node Alignment, Dynamic Camera Zoom, Lightning Thrill Energy, and Expanded Park Fences
 import * as THREE from 'three';
 
 export class Park3D {
@@ -22,7 +22,7 @@ export class Park3D {
     this.coasterTrackGroup = new THREE.Group();
     this.trainUnits = [];
     this.trainProgress = 0;
-    this.trainSpeed = 0.0028; // Snappy fast coaster speed
+    this.trainSpeed = 0.0028;
 
     // Collections
     this.sockets = {};
@@ -38,7 +38,7 @@ export class Park3D {
     this.targetLookAt = new THREE.Vector3(0, 2, -6);
     this.currentLookAt = new THREE.Vector3(0, 2, -6);
 
-    // Cedar Point Node Graph Network (Hotel Breakers Repositioned to Top-Right X:16, Z:-18)
+    // Cedar Point Node Graph Network (100% Math Aligned to Visual Road Shape Centerlines)
     this.NODES = {
       OUTSIDE: new THREE.Vector3(0, 0, 44),
       TURNSTILE: new THREE.Vector3(0, 0, 38),
@@ -58,7 +58,7 @@ export class Park3D {
       PAVILION_DOOR: new THREE.Vector3(16, 0, 2),
       BACKBEAT_DOOR: new THREE.Vector3(-12, 0, -10),
       BAYHARBOR_DOOR: new THREE.Vector3(-24, 0, -20),
-      BREAKERS_DOOR: new THREE.Vector3(16, 0, -18), // Top-Right Viewport Visible Location!
+      BREAKERS_DOOR: new THREE.Vector3(28, 0, -4),
       CASTAWAY_DOOR: new THREE.Vector3(-26, 0, 40)
     };
 
@@ -77,12 +77,12 @@ export class Park3D {
       FRIAR_DOOR: ['J_MIDWAY_2'],
 
       J_MIDWAY_3: ['J_MIDWAY_2', 'PAVILION_DOOR', 'J_NORTH'],
-      PAVILION_DOOR: ['J_MIDWAY_3'],
+      PAVILION_DOOR: ['J_MIDWAY_3', 'BREAKERS_DOOR'],
+      BREAKERS_DOOR: ['PAVILION_DOOR'],
 
-      J_NORTH: ['J_MIDWAY_3', 'BACKBEAT_DOOR', 'BAYHARBOR_DOOR', 'BREAKERS_DOOR', 'J_COASTER'],
+      J_NORTH: ['J_MIDWAY_3', 'BACKBEAT_DOOR', 'BAYHARBOR_DOOR', 'J_COASTER'],
       BACKBEAT_DOOR: ['J_NORTH'],
       BAYHARBOR_DOOR: ['J_NORTH'],
-      BREAKERS_DOOR: ['J_NORTH'],
       J_COASTER: ['J_NORTH']
     };
 
@@ -122,7 +122,7 @@ export class Park3D {
     dirLight.shadow.mapSize.height = 1024;
     this.scene.add(dirLight);
 
-    // Build Environment, Road Network & Perimeter Fence
+    // Build Environment & Seamless Road Network
     this.buildPeninsulaGeography();
     this.buildSeamlessRoadNetwork();
     this.buildPerimeterFence();
@@ -140,7 +140,7 @@ export class Park3D {
   }
 
   buildPeninsulaGeography() {
-    const peninsulaGeo = new THREE.PlaneGeometry(55, 115);
+    const peninsulaGeo = new THREE.PlaneGeometry(60, 130);
     const peninsulaMat = new THREE.MeshStandardMaterial({ color: 0x48a138, roughness: 0.8 });
     const peninsula = new THREE.Mesh(peninsulaGeo, peninsulaMat);
     peninsula.rotation.x = -Math.PI / 2;
@@ -160,7 +160,7 @@ export class Park3D {
     const beachMat = new THREE.MeshStandardMaterial({ color: 0xe3ca96, roughness: 0.9 });
     const beach = new THREE.Mesh(beachGeo, beachMat);
     beach.rotation.x = -Math.PI / 2;
-    beach.position.set(28, 0.02, 0);
+    beach.position.set(32, 0.02, 0);
     this.scene.add(beach);
 
     // Sandusky Bay (West)
@@ -192,31 +192,29 @@ export class Park3D {
     const postMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8 });
     const railMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 });
 
-    // West & East Fences
-    for (let z = -28; z <= 38; z += 6) {
-      // West Fence (X: -26)
+    for (let z = -48; z <= 48; z += 6) {
+      // West Fence (X: -28)
       const postW = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), postMat);
-      postW.position.set(-26, 1.1, z);
+      postW.position.set(-28, 1.1, z);
       fenceGroup.add(postW);
 
       const railW = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 6), railMat);
-      railW.position.set(-26, 1.5, z + 3);
+      railW.position.set(-28, 1.5, z + 3);
       fenceGroup.add(railW);
 
-      // East Fence (X: +26)
+      // East Fence (X: +28)
       const postE = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), postMat);
-      postE.position.set(26, 1.1, z);
+      postE.position.set(28, 1.1, z);
       fenceGroup.add(postE);
 
       const railE = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 6), railMat);
-      railE.position.set(26, 1.5, z + 3);
+      railE.position.set(28, 1.5, z + 3);
       fenceGroup.add(railE);
     }
-
     this.scene.add(fenceGroup);
   }
 
-  // SEAMLESS UNIFIED ROAD MESH (Hotel Breakers Branch at X:16, Z:-18)
+  // SEAMLESS UNIFIED ROAD MESH (Zero Seams / Zero Z-Fighting)
   buildSeamlessRoadNetwork() {
     const roadGroup = new THREE.Group();
     const roadTexture = this.createPavingTexture();
@@ -228,68 +226,71 @@ export class Park3D {
 
     const shape = new THREE.Shape();
 
-    // Main Midway Central Spine (X: -4 to +4)
+    // 1. Draw Main Midway Central Spine (X: -4 to +4)
     shape.moveTo(-4, -28);
     shape.lineTo(-16, -28); // Coaster Plaza
     shape.lineTo(-16, -24);
     shape.lineTo(-4, -24);
 
     // Bay Harbor Marina Branch (West)
+    shape.lineTo(-4, -22);
     shape.lineTo(-24, -22);
     shape.lineTo(-24, -18);
     shape.lineTo(-4, -18);
 
     // BackBeatQue Branch (West)
-    shape.lineTo(-4, -12.5);
-    shape.lineTo(-12, -12.5);
-    shape.lineTo(-12, -7.5);
-    shape.lineTo(-4, -7.5);
+    shape.lineTo(-4, -12);
+    shape.lineTo(-12, -12);
+    shape.lineTo(-12, -8);
+    shape.lineTo(-4, -8);
 
     // French Quarter Branch (West)
-    shape.lineTo(-4, 9.5);
-    shape.lineTo(-12, 9.5);
-    shape.lineTo(-12, 14.5);
-    shape.lineTo(-4, 14.5);
+    shape.lineTo(-4, 10);
+    shape.lineTo(-12, 10);
+    shape.lineTo(-12, 14);
+    shape.lineTo(-4, 14);
 
     // Hugo's Pizza Branch (West)
-    shape.lineTo(-4, 19.5);
-    shape.lineTo(-12, 19.5);
-    shape.lineTo(-12, 24.5);
-    shape.lineTo(-4, 24.5);
+    shape.lineTo(-4, 20);
+    shape.lineTo(-12, 20);
+    shape.lineTo(-12, 24);
+    shape.lineTo(-4, 24);
 
     // Rentals Branch (West)
-    shape.lineTo(-4, 29.5);
-    shape.lineTo(-10, 29.5);
-    shape.lineTo(-10, 34.5);
-    shape.lineTo(-4, 34.5);
+    shape.lineTo(-4, 30);
+    shape.lineTo(-10, 30);
+    shape.lineTo(-10, 34);
+    shape.lineTo(-4, 34);
 
     // Entrance Gate (South Tip)
     shape.lineTo(-4, 44);
     shape.lineTo(4, 44);
 
     // Coasters Diner Branch (East)
-    shape.lineTo(4, 24.5);
-    shape.lineTo(12, 24.5);
-    shape.lineTo(12, 19.5);
-    shape.lineTo(4, 19.5);
+    shape.lineTo(4, 24);
+    shape.lineTo(12, 24);
+    shape.lineTo(12, 20);
+    shape.lineTo(4, 20);
 
     // Happy Friar Branch (East)
-    shape.lineTo(4, 14.5);
-    shape.lineTo(12, 14.5);
-    shape.lineTo(12, 9.5);
-    shape.lineTo(4, 9.5);
+    shape.lineTo(4, 14);
+    shape.lineTo(12, 14);
+    shape.lineTo(12, 10);
+    shape.lineTo(4, 10);
 
     // Grand Pavilion Branch (East)
-    shape.lineTo(4, 4.5);
-    shape.lineTo(16, 4.5);
-    shape.lineTo(16, -0.5);
+    shape.lineTo(4, 4);
+    shape.lineTo(16, 4);
+    shape.lineTo(16, 0);
 
-    // Hotel Breakers Top-Right Visible Branch (East X:16, Z:-18)
-    shape.lineTo(4, -0.5);
-    shape.lineTo(4, -15.5);
-    shape.lineTo(16, -15.5);
-    shape.lineTo(16, -20.5);
-    shape.lineTo(4, -20.5);
+    // Hotel Breakers Boardwalk Extension
+    shape.lineTo(4, 0);
+    shape.lineTo(4, -6);
+    shape.lineTo(28, -6);
+    shape.lineTo(28, -2);
+    shape.lineTo(16, -2);
+    shape.lineTo(16, 0);
+    shape.lineTo(4, 0);
 
     shape.lineTo(4, -28);
     shape.closePath();
@@ -413,6 +414,7 @@ export class Park3D {
     this.scene.add(this.managerGroup);
   }
 
+  // SOCKET RING PADS POSITIONED PRECISELY AT END OF SIDEWALKS
   buildAllSockets() {
     const socketPositions = [
       { id: 'rentals', pos: this.NODES.RENTALS_DOOR },
@@ -433,8 +435,9 @@ export class Park3D {
       const padGroup = new THREE.Group();
       padGroup.position.copy(s.pos);
 
+      // Compact glowing ring pad fitting on 4m wide sidewalk pad
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(2.0, 2.6, 24),
+        new THREE.RingGeometry(1.8, 2.4, 24),
         new THREE.MeshBasicMaterial({ color: 0xffd700, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
       );
       ring.rotation.x = -Math.PI / 2;
@@ -448,7 +451,6 @@ export class Park3D {
 
   // COCA-COLA FREESTYLE MACHINES, TREES, BUSHES & LIGHTING
   spawnFreestyleMachinesAndDecorations() {
-    // 1. Coca-Cola Freestyle Stations along Midway Corners
     const freestylePositions = [
       new THREE.Vector3(4.8, 0, 32),
       new THREE.Vector3(-4.8, 0, 22),
@@ -460,12 +462,10 @@ export class Park3D {
       const station = new THREE.Group();
       station.position.copy(pos);
 
-      // Red Coca-Cola Dispenser Cabinet
       const cabinet = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.4, 1.0), new THREE.MeshStandardMaterial({ color: 0xe50914, roughness: 0.3 }));
       cabinet.position.y = 1.2;
       station.add(cabinet);
 
-      // White Header Screen
       const screen = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.1), new THREE.MeshBasicMaterial({ color: 0xffffff }));
       screen.position.set(0, 1.8, 0.52);
       station.add(screen);
@@ -473,7 +473,6 @@ export class Park3D {
       this.scene.add(station);
     });
 
-    // 2. Green Hedge Bushes & Trees
     const bushPositions = [
       new THREE.Vector3(-4.6, 0, 27),
       new THREE.Vector3(4.6, 0, 27),
@@ -494,7 +493,6 @@ export class Park3D {
       this.scene.add(bush);
     });
 
-    // Street Lamps
     const lampPositions = [
       new THREE.Vector3(-4.5, 0, 32),
       new THREE.Vector3(4.5, 0, 32),
@@ -529,6 +527,7 @@ export class Park3D {
     this.isManagerBuilding = true;
   }
 
+  // BUILDINGS POSITIONED RIGHT BEHIND SOCKET PAD FACING STREET
   buildBuildingOnSocket(socketId, buildingType) {
     if (this.sockets[socketId]) {
       this.sockets[socketId].visible = false;
@@ -537,11 +536,14 @@ export class Park3D {
     const pos = this.sockets[socketId] ? this.sockets[socketId].position : this.NODES.RENTALS_DOOR;
     const group = new THREE.Group();
 
+    // Offset building model center behind the socket ring pad facing street
     let bOffsetX = 0;
-    if (pos.x < 0) bOffsetX = -3.5;
-    else if (pos.x > 0) bOffsetX = 3.5;
+    let bOffsetZ = 0;
 
-    group.position.set(pos.x + bOffsetX, pos.y, pos.z);
+    if (pos.x < 0) bOffsetX = -3.5; // West side: building behind socket pad
+    else if (pos.x > 0) bOffsetX = 3.5; // East side: building behind socket pad
+
+    group.position.set(pos.x + bOffsetX, pos.y, pos.z + bOffsetZ);
 
     if (buildingType === 'rentals') {
       const walls = new THREE.Mesh(new THREE.BoxGeometry(6.0, 3.8, 4.8), new THREE.MeshStandardMaterial({ color: 0x2b4c7e }));
@@ -667,6 +669,7 @@ export class Park3D {
     parentGroup.add(tableGroup);
   }
 
+  // 3-STAGE COASTER PROGRESSION POSITIONED STRICTLY IN REAR COASTER PLAZA (ZERO ROAD CLIPPING!)
   buildCoasterStage(stage) {
     this.coasterStage = stage;
     while (this.coasterTrackGroup.children.length > 0) {
@@ -676,6 +679,7 @@ export class Park3D {
 
     let points = [];
     if (stage === 1) {
+      // Stage 1: Rear Junior Coaster Loop (Strictly in North-West Coaster Zone)
       points = [
         new THREE.Vector3(-16, 2, -28),
         new THREE.Vector3(-16, 8, -38),
@@ -685,6 +689,7 @@ export class Park3D {
         new THREE.Vector3(-26, 2, -28)
       ];
     } else if (stage === 2) {
+      // Stage 2: Rear Thrill Loop Coaster
       points = [
         new THREE.Vector3(-16, 2, -28),
         new THREE.Vector3(-16, 14, -42),
@@ -696,12 +701,13 @@ export class Park3D {
         new THREE.Vector3(-16, 2, -24)
       ];
     } else {
+      // Stage 3: Rear Millennium Force Hypercoaster Peak
       points = [
         new THREE.Vector3(-16, 2, -28),
         new THREE.Vector3(-16, 18, -46),
-        new THREE.Vector3(-16, 30, -52),
-        new THREE.Vector3(-28, 4, -40),
-        new THREE.Vector3(-28, 14, -34),
+        new THREE.Vector3(-16, 30, -52), // High Peak in back
+        new THREE.Vector3(-28, 4, -40),   // 80° Drop
+        new THREE.Vector3(-28, 14, -34),  // Loop
         new THREE.Vector3(-28, 24, -28),
         new THREE.Vector3(-28, 4, -22),
         new THREE.Vector3(-20, 16, -18),
